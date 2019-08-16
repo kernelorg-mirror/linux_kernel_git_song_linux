@@ -237,6 +237,30 @@ static void linear_free(struct mddev *mddev, void *priv)
 	kfree(conf);
 }
 
+static bool linear_is_missing_dev(struct mddev *mddev)
+{
+	struct md_rdev *rdev;
+	static int already_missing;
+	int def_disks, work_disks = 0;
+
+	def_disks = mddev->raid_disks;
+	rdev_for_each(rdev, mddev)
+		if (rdev->bdev->bd_disk->flags & GENHD_FL_UP)
+			work_disks++;
+
+	if (unlikely(def_disks - work_disks)) {
+		if (already_missing < (def_disks - work_disks)) {
+			already_missing = def_disks - work_disks;
+			pr_warn("md: %s: linear array has %d missing/failed members\n",
+				mdname(mddev), already_missing);
+		}
+		return true;
+	}
+
+	already_missing = 0;
+	return false;
+}
+
 static bool linear_make_request(struct mddev *mddev, struct bio *bio)
 {
 	char b[BDEVNAME_SIZE];
@@ -325,6 +349,7 @@ static struct md_personality linear_personality =
 	.size		= linear_size,
 	.quiesce	= linear_quiesce,
 	.congested	= linear_congested,
+	.is_missing_dev	= linear_is_missing_dev,
 };
 
 static int __init linear_init (void)
