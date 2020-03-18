@@ -2340,6 +2340,11 @@ static int x86_pmu_aux_output_match(struct perf_event *event)
 	return 0;
 }
 
+static void x86_copy_hw_config(struct perf_event *old, struct perf_event *new)
+{
+	new->hw.idx = old->hw.idx;
+}
+
 static struct pmu pmu = {
 	.pmu_enable		= x86_pmu_enable,
 	.pmu_disable		= x86_pmu_disable,
@@ -2368,6 +2373,8 @@ static struct pmu pmu = {
 	.check_period		= x86_pmu_check_period,
 
 	.aux_output_match	= x86_pmu_aux_output_match,
+
+	.copy_hw_config		= x86_copy_hw_config,
 };
 
 void arch_perf_update_userpage(struct perf_event *event,
