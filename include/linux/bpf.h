@@ -1480,6 +1480,7 @@ struct bpf_prog *bpf_prog_by_id(u32 id);
 struct bpf_link *bpf_link_by_id(u32 id);
 
 const struct bpf_func_proto *bpf_base_func_proto(enum bpf_func_id func_id);
+void bpf_task_storage_free(struct task_struct *task);
 #else /* !CONFIG_BPF_SYSCALL */
 static inline struct bpf_prog *bpf_prog_get(u32 ufd)
 {
@@ -1664,6 +1665,10 @@ static inline const struct bpf_func_proto *
 bpf_base_func_proto(enum bpf_func_id func_id)
 {
 	return NULL;
+}
+
+static inline void bpf_task_storage_free(struct task_struct *task)
+{
 }
 #endif /* CONFIG_BPF_SYSCALL */
 
