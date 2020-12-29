@@ -46,8 +46,10 @@ static int bpf_program_profiler__destroy(struct evsel *evsel)
 {
 	struct bpf_counter *counter;
 
-	list_for_each_entry(counter, &evsel->bpf_counter_list, list)
+	list_for_each_entry(counter, &evsel->bpf_counter_list, list) {
+		pr_debug("%s counter = %lx\n", __func__, (unsigned long)counter);
 		bpf_prog_profiler_bpf__destroy(counter->skel);
+	}
 	INIT_LIST_HEAD(&evsel->bpf_counter_list);
 	return 0;
 }
@@ -141,8 +143,14 @@ static int bpf_program_profiler_load_one(struct evsel *evsel, u32 prog_id)
 	counter->skel = skel;
 	list_add(&counter->list, &evsel->bpf_counter_list);
 	close(prog_fd);
+	pr_debug("%s counter = %lx\n", __func__, (unsigned long)counter);
+	pr_debug("%s skel = %lx\n", __func__, (unsigned long)skel);
+	pr_debug("%s return 0\n", __func__);
 	return 0;
 err_out:
+	pr_debug("%s counter = %lx\n", __func__, (unsigned long)counter);
+	pr_debug("%s skel = %lx\n", __func__, (unsigned long)skel);
+	pr_debug("%s return -1\n", __func__);
 	free(counter);
 	close(prog_fd);
 	return -1;
@@ -214,11 +222,22 @@ static int bpf_program_profiler__read(struct evsel *evsel)
 	list_for_each_entry(counter, &evsel->bpf_counter_list, list) {
 		struct bpf_prog_profiler_bpf *skel = counter->skel;
 
+		pr_debug("%s counter = %lx\n", __func__, (unsigned long)counter);
+		pr_debug("%s skel = %lx\n", __func__, (unsigned long)skel);
+		if (!skel) {
+			pr_err("%s !skel\n", __func__);
+			continue;
+		}
+		if (!skel->maps.accum_readings) {
+			pr_err("%s !skel->maps.accum_readings", __func__);
+			continue;
+		}
+
 		reading_map_fd = bpf_map__fd(skel->maps.accum_readings);
 
 		err = bpf_map_lookup_elem(reading_map_fd, &key, values);
 		if (err) {
-			fprintf(stderr, "failed to read value\n");
+			pr_err("failed to read value\n");
 			return err;
 		}
 
@@ -240,6 +259,8 @@ static int bpf_program_profiler__install_pe(struct evsel *evsel, int cpu,
 
 	list_for_each_entry(counter, &evsel->bpf_counter_list, list) {
 		skel = counter->skel;
+		pr_debug("%s counter = %lx\n", __func__, (unsigned long)counter);
+		pr_debug("%s skel = %lx\n", __func__, (unsigned long)skel);
 		ret = bpf_map_update_elem(bpf_map__fd(skel->maps.events),
 					  &cpu, &fd, BPF_ANY);
 		if (ret)
